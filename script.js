@@ -1,57 +1,171 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const scrollContainer = document.querySelector('.scroll-container');
-    const imageWrappers = document.querySelectorAll('.image-wrapper');
-    const textOverlay = document.querySelector('.text-overlay');
-    const totalHeight = document.querySelector('.main-section').offsetHeight;
-    const viewportHeight = window.innerHeight;
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.querySelector(".container");
+    const menuToggle = document.querySelector(".menu-toggle");
+    const menuOverlay = document.querySelector(".menu-overlay");
+    const menuContent = document.querySelector(".menu-content");
+    const menuLinks = document.querySelectorAll(".link a"); // Fixed selector
+    const menuPreviewImg = document.querySelector(".menu-preview-img");
 
-    // Calculate scroll thresholds
-    const image1End = viewportHeight * 0.5;
-    const image2Start = viewportHeight * 0.5;
-    const image2End = viewportHeight * 1.5;
-    const image3Start = viewportHeight * 1.5;
+    let isOpen = false;
+    let isAnimating = false;
 
-    function handleScroll() {
-        const scrollPosition = scrollContainer.scrollTop;
+    menuToggle.addEventListener("click", () => {
+        if (!isOpen) openMenu();
+        else closeMenu();
+    });
 
-        // Image 1 (starts visible, fades out halfway)
-        if (scrollPosition < image1End) {
-            const opacity = 1 - (scrollPosition / image1End);
-            imageWrappers[0].style.opacity = opacity;
-        } else {
-            imageWrappers[0].style.opacity = '0';
-        }
-
-        // Image 2 (appears halfway, fades out at 1.5x viewport)
-        if (scrollPosition >= image2Start && scrollPosition <= image2End) {
-            const progress = (scrollPosition - image2Start) / viewportHeight;
-            imageWrappers[1].style.opacity = 1;
-
-            // Show text after some scrolling into image 2
-            if (progress > 0.3) {
-                textOverlay.classList.add('show');
-            } else {
-                textOverlay.classList.remove('show');
+    function cleanupPreviewImages() {
+        const previewImages = menuPreviewImg.querySelectorAll("img");
+        if (previewImages.length > 3) {
+            for (let i = 0; i < previewImages.length - 3; i++) {
+                menuPreviewImg.removeChild(previewImages[i]);
             }
-        } else if (scrollPosition < image2Start) {
-            imageWrappers[1].style.opacity = '0';
-            textOverlay.classList.remove('show');
-        } else {
-            imageWrappers[1].style.opacity = '0';
-        }
-
-        // Image 3 (appears at 1.5x viewport)
-        if (scrollPosition >= image3Start) {
-            const progress = (scrollPosition - image3Start) / viewportHeight;
-            imageWrappers[2].style.opacity = Math.min(1, progress * 2);
-        } else {
-            imageWrappers[2].style.opacity = '0';
         }
     }
 
-    // Set initial state
-    handleScroll();
+    function resetPreviewImage() {
+        menuPreviewImg.innerHTML = "";
+        const defaultPreviewImg = document.createElement("img");
+        defaultPreviewImg.src = "images/Image-1.png";
+        menuPreviewImg.appendChild(defaultPreviewImg);
+    }
 
-    // Add scroll event listener
-    scrollContainer.addEventListener('scroll', handleScroll);
+    function animateMenuToggle(isOpening) {
+        const open = document.querySelector("p#menu-open");
+        const close = document.querySelector("p#menu-close");
+
+        gsap.to(isOpening ? open : close, {
+            x: isOpening ? -5 : 5,
+            y: isOpening ? -10 : 10,
+            rotation: isOpening ? -5 : 5,
+            opacity: 0,
+            delay: 0.25,
+            duration: 0.5,
+            ease: "power2.out",
+        });
+
+        gsap.to(isOpening ? close : open, {
+            x: 0,
+            y: 0,
+            rotation: 0,
+            opacity: 1,
+            delay: 0.5,
+            duration: 0.5,
+            ease: "power2.out",
+        });
+    }
+
+    function openMenu() {
+        if (isAnimating || isOpen) return;
+        isAnimating = true;
+
+        gsap.to(container, {
+            rotation: 10,
+            x: 300,
+            y: 450,
+            scale: 1.5,
+            duration: 1.25,
+            ease: "power4.inOut",
+        });
+
+        animateMenuToggle(true);
+
+        gsap.to(menuContent, {
+            rotation: 0,
+            x: 0,
+            y: 0,
+            scale: 1,
+            opacity: 1,
+            duration: 1.25,
+            ease: "power4.inOut",
+        });
+
+        gsap.to([".link a", ".social a"], {
+            y: "0%",
+            opacity: 1,
+            duration: 1,
+            delay: 0.75,
+            stagger: 0.1,
+            ease: "power3.out",
+        });
+
+        gsap.to(menuOverlay, {
+            clipPath: "polygon(0% 0%, 100% 0%, 100% 175%, 0% 100%)",
+            duration: 1.25,
+            ease: "power4.inOut",
+            onComplete: () => {
+                isOpen = true;
+                isAnimating = false;
+            }
+        });
+    }
+
+    function closeMenu() {
+        if (isAnimating || !isOpen) return;
+        isAnimating = true;
+
+        gsap.to(container, {
+            rotation: 0,
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: 1.25,
+            ease: "power4.inOut",
+        });
+
+        animateMenuToggle(false);
+
+        gsap.to(menuContent, {
+            rotation: -15,
+            x: -100,
+            y: -100,
+            scale: 1.5,
+            opacity: 0.25,
+            duration: 1.25,
+            ease: "power4.inOut",
+        });
+
+        gsap.to(menuOverlay, {
+            clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 0%)",
+            duration: 1.25,
+            ease: "power4.inOut",
+            onComplete: () => {
+                isOpen = false;
+                isAnimating = false;
+                gsap.set([".link a", ".social a"], { y: "120%" });
+                resetPreviewImage();
+            }
+        });
+    }
+
+    menuLinks.forEach((link) => {
+        link.addEventListener("mouseover", () => {
+            if (!isOpen || isAnimating) return;
+
+            const imgSrc = link.getAttribute("data-img");
+            if (!imgSrc) return;
+
+            const previewImages = menuPreviewImg.querySelectorAll("img");
+            if (
+                previewImages.length > 0 &&
+                previewImages[previewImages.length - 1].src.endsWith(imgSrc)
+            ) return;
+
+            const newPreviewImg = document.createElement("img");
+            newPreviewImg.src = imgSrc;
+            newPreviewImg.style.opacity = "0";
+            newPreviewImg.style.transform = "scale(1.25) rotate(10deg)";
+
+            menuPreviewImg.appendChild(newPreviewImg);
+            cleanupPreviewImages();
+
+            gsap.to(newPreviewImg, {
+                opacity: 1,
+                scale: 1,
+                rotation: 0,
+                duration: 0.75,
+                ease: "power2.out",
+            })
+        });
+    });
 });
